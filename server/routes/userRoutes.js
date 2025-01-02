@@ -9,7 +9,7 @@ const { protect } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
 // Routes publiques
-router.post("/register", registerUser);
+router.post("/register", upload.single("profilePicture"), registerUser);
 router.post("/login", loginUser);
 
 // Route protégée
