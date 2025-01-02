@@ -57,7 +57,9 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user.id,
       name: user.name,
       email: user.email,
-      profilePicture: user.profilePicture ? true : false, // Indique si une image existe
+      profilePicture: user.profilePicture
+        ? user.profilePicture.toString("base64")
+        : null, // Convertir l'image en base64
       contentType: user.contentType,
       token: generateJWTtoken(user._id),
     });
@@ -81,7 +83,9 @@ const loginUser = asyncHandler(async (req, res) => {
       _id: user.id,
       name: user.name,
       email: user.email,
-      profilePicture: user.profilePicture ? true : false, // Renvoyer si l'image existe
+      profilePicture: user.profilePicture
+        ? user.profilePicture.toString("base64")
+        : null, // Convertir l'image en base64
       contentType: user.contentType,
       token: generateJWTtoken(user._id),
     });
