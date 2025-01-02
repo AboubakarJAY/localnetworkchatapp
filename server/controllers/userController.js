@@ -1,5 +1,9 @@
 const multer = require("multer");
 const path = require("path");
+const asyncHandler = require("express-async-handler");
+const User = require("../models/userModel");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 // Configurer Multer pour stocker l'image dans la base de données (en mémoire)
 const storage = multer.memoryStorage();
