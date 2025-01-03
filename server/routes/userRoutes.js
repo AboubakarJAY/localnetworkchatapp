@@ -4,9 +4,9 @@ const {
   registerUser,
   loginUser,
   getCurrentUser,
+  getProfilePicture,
 } = require("../controllers/userController");
 const { protect } = require("../middlewares/authMiddleware");
-
 const router = express.Router();
 
 // Configuration de multer pour gérer les fichiers
@@ -23,6 +23,9 @@ router.post(
   },
   registerUser
 );
+
+// Route pour récupérer l'image de profil
+router.get("/profilePicture/:userId", getProfilePicture);
 
 // router.post("/register", upload.single("profilePicture"), registerUser);
 router.post("/login", loginUser);
