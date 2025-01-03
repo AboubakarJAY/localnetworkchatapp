@@ -58,8 +58,8 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       profilePicture: user.profilePicture
-        ? user.profilePicture.toString("base64")
-        : null, // Convertir l'image en base64
+        ? "/profilePicture/" + user._id
+        : null, // URL pour l'image
       contentType: user.contentType,
       token: generateJWTtoken(user._id),
     });
@@ -73,9 +73,17 @@ const registerUser = asyncHandler(async (req, res) => {
 // Connexion d'un utilisateur
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   // Recherche de l'utilisateur par email
   const user = await User.findOne({ email });
+  if (!user) {
+    // Log si l'utilisateur n'est pas trouvé
+    console.log(`User with email ${email} not found.`);
+    console.log(req.body);
+    res.status(400);
+    throw new Error("Invalid email or password");
+  }
 
   // Validation du mot de passe
   if (user && (await bcrypt.compare(password, user.password))) {
@@ -84,8 +92,8 @@ const loginUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       profilePicture: user.profilePicture
-        ? user.profilePicture.toString("base64")
-        : null, // Convertir l'image en base64
+        ? "/profilePicture/" + user._id
+        : null, // URL pour l'image
       contentType: user.contentType,
       token: generateJWTtoken(user._id),
     });
@@ -99,13 +107,32 @@ const loginUser = asyncHandler(async (req, res) => {
 // Récupération des informations de l'utilisateur connecté
 const getCurrentUser = asyncHandler(async (req, res) => {
   const { _id, name, email, profilePicture, contentType } = req.user; // `req.user` est ajouté par le middleware d'authentification
+
+  // Renvoi des données utilisateur avec une URL pour l'image de profil si elle existe
   res.status(200).json({
     id: _id,
     name,
     email,
-    profilePicture: profilePicture ? true : false, // Renvoyer si l'image existe
+    profilePicture: profilePicture ? "/profilePicture/" + _id : null, // URL pour l'image
     contentType,
   });
 });
 
-module.exports = { registerUser, loginUser, getCurrentUser };
+// Route pour récupérer l'image de profil
+const getProfilePicture = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // Recherche de l'utilisateur par ID
+  const user = await User.findById(userId);
+
+  if (user && user.profilePicture) {
+    // Envoi de l'image en tant que fichier avec son type MIME
+    res.setHeader("Content-Type", user.contentType);
+    res.send(user.profilePicture); // Envoi du buffer d'image
+  } else {
+    res.status(404);
+    throw new Error("Image not found");
+  }
+});
+
+module.exports = { registerUser, loginUser, getCurrentUser, getProfilePicture };
