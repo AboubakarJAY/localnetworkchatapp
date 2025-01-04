@@ -4,135 +4,128 @@ const asyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
 
-// Configurer Multer pour stocker l'image dans la base de données (en mémoire)
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// Configuration de Multer pour gérer l'upload des images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, "..", "uploads", "profilePictures");
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + path.extname(file.originalname);
+    cb(null, uniqueSuffix);
+  },
+});
 
-// Générer un token JWT
+const upload = multer({ storage });
+
+// Fonction pour générer un token JWT
 const generateJWTtoken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "5d" });
 };
 
-// Inscription d'un utilisateur avec une image
+// Inscription d'un utilisateur
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
-  // Vérification des champs obligatoires
   if (!name || !email || !password) {
     res.status(400);
-    throw new Error("All fields are mandatory");
+    throw new Error("Tous les champs sont obligatoires");
   }
 
-  // Vérification si l'utilisateur existe déjà
   const userExists = await User.findOne({ email });
   if (userExists) {
     res.status(400);
-    throw new Error("User already exists");
+    throw new Error("L'utilisateur existe déjà");
   }
 
-  // Hashage du mot de passe
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Traitement de l'image de profil (si elle existe)
   let profilePicture = null;
-  let contentType = null;
   if (req.file) {
-    profilePicture = req.file.buffer; // L'image est en mémoire sous forme de buffer
-    contentType = req.file.mimetype; // Type MIME de l'image
+    profilePicture = path.join("uploads", "profilePictures", req.file.filename);
   }
 
-  // Création de l'utilisateur
-  const user = await User.create({
-    name,
-    email,
-    password: hashedPassword,
-    profilePicture, // Ajout de l'image dans la base de données
-    contentType, // Type MIME de l'image
-  });
-
-  if (user) {
-    res.status(201).json({
-      _id: user.id,
-      name: user.name,
-      email: user.email,
-      profilePicture: user.profilePicture
-        ? "/profilePicture/" + user._id
-        : null, // URL pour l'image
-      contentType: user.contentType,
-      token: generateJWTtoken(user._id),
+  try {
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      profilePicture,
     });
-    console.log(`User ${user.name} registered`);
-  } else {
-    res.status(400);
-    throw new Error("Invalid user data");
+
+    if (user) {
+      res.status(201).json({
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        token: generateJWTtoken(user._id),
+      });
+    } else {
+      res.status(400);
+      throw new Error("Données utilisateur invalides");
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 });
 
-// Connexion d'un utilisateur
+// Autres fonctions (connexion, récupération des infos, etc.)
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
-
-  // Recherche de l'utilisateur par email
   const user = await User.findOne({ email });
-  if (!user) {
-    // Log si l'utilisateur n'est pas trouvé
-    console.log(`User with email ${email} not found.`);
-    console.log(req.body);
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     res.status(400);
-    throw new Error("Invalid email or password");
+    throw new Error("Email ou mot de passe invalides");
   }
 
-  // Validation du mot de passe
-  if (user && (await bcrypt.compare(password, user.password))) {
-    res.json({
-      _id: user.id,
-      name: user.name,
-      email: user.email,
-      profilePicture: user.profilePicture
-        ? "/profilePicture/" + user._id
-        : null, // URL pour l'image
-      contentType: user.contentType,
-      token: generateJWTtoken(user._id),
-    });
-    console.log(`User ${user.name} logged in`);
-  } else {
-    res.status(400);
-    throw new Error("Invalid email or password");
-  }
+  res.json({
+    _id: user.id,
+    name: user.name,
+    email: user.email,
+    profilePicture: user.profilePicture,
+    token: generateJWTtoken(user._id),
+  });
 });
 
-// Récupération des informations de l'utilisateur connecté
 const getCurrentUser = asyncHandler(async (req, res) => {
-  const { _id, name, email, profilePicture, contentType } = req.user; // `req.user` est ajouté par le middleware d'authentification
+  const { _id, name, email, profilePicture } = req.user;
 
-  // Renvoi des données utilisateur avec une URL pour l'image de profil si elle existe
   res.status(200).json({
     id: _id,
     name,
     email,
-    profilePicture: profilePicture ? "/profilePicture/" + _id : null, // URL pour l'image
-    contentType,
+    profilePicture,
   });
 });
 
-// Route pour récupérer l'image de profil
 const getProfilePicture = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-
-  // Recherche de l'utilisateur par ID
   const user = await User.findById(userId);
 
   if (user && user.profilePicture) {
-    // Envoi de l'image en tant que fichier avec son type MIME
-    res.setHeader("Content-Type", user.contentType);
-    res.send(user.profilePicture); // Envoi du buffer d'image
+    const imagePath = path.join(__dirname, "..", user.profilePicture);
+    res.sendFile(imagePath, (err) => {
+      if (err) {
+        res.status(500).json({ message: "Erreur lors de l'envoi de l'image" });
+      }
+    });
   } else {
-    res.status(404);
-    throw new Error("Image not found");
+    res.status(404).json({ message: "Image non trouvée" });
   }
 });
 
-module.exports = { registerUser, loginUser, getCurrentUser, getProfilePicture };
+module.exports = {
+  registerUser,
+  loginUser,
+  getCurrentUser,
+  getProfilePicture,
+  upload,
+};

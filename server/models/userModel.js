@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
     },
     profilePicture: {
-      type: Buffer, // Stockage de l'image sous forme de buffer
+      type: String, // Stocke l'URL relative de l'image
     },
     contentType: {
       type: String, // Type MIME de l'image

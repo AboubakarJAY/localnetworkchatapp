@@ -77,7 +77,10 @@ exports.createEvent = async (req, res) => {
 // Récupérer tous les événements
 exports.getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find().populate("user", "name email");
+    const events = await Event.find().populate(
+      "user",
+      "name email profilePicture"
+    );
 
     // Ajouter les URLs des images à chaque événement avec liens relatifs
     const eventsWithImageUrls = events.map((event) => {
