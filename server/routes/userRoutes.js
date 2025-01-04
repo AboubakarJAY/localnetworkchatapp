@@ -27,7 +27,7 @@ router.post(
 // Route pour récupérer l'image de profil
 router.get("/profilePicture/:userId", getProfilePicture);
 
-// router.post("/register", upload.single("profilePicture"), registerUser);
+router.post("/register", upload.single("profilePicture"), registerUser);
 router.post("/login", loginUser);
 
 // Route protégée

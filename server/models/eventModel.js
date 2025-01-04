@@ -18,7 +18,7 @@ const eventSchema = new mongoose.Schema(
     },
     images: [
       {
-        type: String, // Chemins des images uploadées
+        type: String,
       },
     ],
     startDate: {
@@ -33,6 +33,12 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: [true, "Le lieu est obligatoire"],
     },
+    participants: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ], // Liste des participants à cet événement
   },
   {
     timestamps: true, // Ajoute automatiquement createdAt et updatedAt

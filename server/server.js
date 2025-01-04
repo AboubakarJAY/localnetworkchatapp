@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const http = require("http");
+const path = require("path");
 const { errorHandler } = require("./middlewares/errorMiddleware");
 const socketIo = require("socket.io");
 const bcrypt = require("bcryptjs");
@@ -39,7 +40,10 @@ mongoose
   .catch((err) => console.log(err));
 
 // Routes
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/events", require("./routes/eventRoutes"));
 
 // Route de test
 app.get("/", (req, res) => {

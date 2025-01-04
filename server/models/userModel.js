@@ -23,6 +23,12 @@ const userSchema = new mongoose.Schema(
     contentType: {
       type: String, // Type MIME de l'image
     },
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ], // Utilisateurs abonnés
   },
   { timestamps: true }
 );

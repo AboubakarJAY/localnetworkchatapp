@@ -1,10 +1,11 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
+const jwt = require("jsonwebtoken");
+const User = require("../models/userModel"); // Assure-toi que ce modèle est correctement importé
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
+  // Vérifier si le token est dans l'en-tête Authorization
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
@@ -18,6 +19,12 @@ const protect = asyncHandler(async (req, res, next) => {
 
       // Récupérer les informations utilisateur sans le mot de passe
       req.user = await User.findById(decoded.id).select("-password");
+
+      // Si l'utilisateur n'est pas trouvé
+      if (!req.user) {
+        res.status(401);
+        throw new Error("Not authorized, user not found");
+      }
 
       next();
     } catch (error) {
