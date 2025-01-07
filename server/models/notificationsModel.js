@@ -18,3 +18,4 @@ const NotificationSchema = new mongoose.Schema({
     default: "sent",
   },
 });
+module.exports = mongoose.model("Notification", userSchema);
