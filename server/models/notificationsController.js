@@ -1,7 +1,6 @@
 const express = require("express");
 const User = require("./models/User");
 const app = express();
-app.use(express.json());
 
 // API pour suivre un utilisateur
 app.post("/follow", async (req, res) => {
@@ -36,7 +35,7 @@ const sendNotificationToClient = (deviceId, followerName) => {
   // Exemple en utilisant une requête HTTP
   const notificationPayload = {
     deviceId: deviceId,
-    message: `${followerName} is now following you!`,
+    message: `${followerName} vous suis !`,
   };
 
   // Envoyer la requête à l'application cliente (qui écoute sur un certain endpoint)
