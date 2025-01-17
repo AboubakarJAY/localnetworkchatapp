@@ -29,6 +29,12 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ], // Utilisateurs abonnés
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ], // Utilisateurs suivis
   },
   { timestamps: true }
 );

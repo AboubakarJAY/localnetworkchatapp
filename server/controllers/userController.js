@@ -5,6 +5,7 @@ const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
+const Event = require("../models/eventModel");
 
 // Configuration de Multer pour gérer l'upload des images
 const storage = multer.diskStorage({
@@ -96,14 +97,45 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  const { _id, name, email, profilePicture } = req.user;
+  const { _id, name, email, profilePicture, followers, following } = req.user;
 
-  res.status(200).json({
-    id: _id,
-    name,
-    email,
-    profilePicture,
-  });
+  try {
+    // Récupérer les événements publiés par l'utilisateur
+    const userEvents = await Event.find({ user: _id }).populate(
+      "user",
+      "name email profilePicture"
+    );
+
+    // Ajouter les URLs des images à chaque événement avec liens relatifs
+    const eventsWithImageUrls = userEvents.map((event) => {
+      const imagePaths =
+        Array.isArray(event.images) && event.images.length > 0
+          ? event.images.map(
+              (image) => `/uploads/events/${path.basename(image)}`
+            )
+          : []; // Si pas d'images, retourner un tableau vide
+
+      return {
+        ...event._doc, // Inclure toutes les autres informations de l'événement
+        images: imagePaths, // Liens relatifs vers les images
+      };
+    });
+    console.log(eventsWithImageUrls);
+
+    // Réponse finale avec les infos utilisateur et ses événements
+    res.status(200).json({
+      id: _id,
+      name,
+      email,
+      profilePicture,
+      followersCount: followers.length, // Nombre de followers
+      followingCount: following.length, // Nombre de personnes suivies
+      events: eventsWithImageUrls, // Ajouter les événements publiés par l'utilisateur
+    });
+  } catch (error) {
+    console.error(error); // Afficher l'erreur pour faciliter le débogage
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
 });
 
 const getProfilePicture = asyncHandler(async (req, res) => {
