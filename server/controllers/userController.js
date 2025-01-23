@@ -100,14 +100,14 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   const { _id, name, email, profilePicture, followers, following } = req.user;
 
   try {
-    // Récupérer les événements publiés par l'utilisateur
-    const userEvents = await Event.find({ user: _id }).populate(
-      "user",
-      "name email profilePicture"
-    );
+    // Récupérer les événements publiés par l'utilisateur avec les informations de l'utilisateur lié
+    const userEvents = await Event.find({ user: _id })
+      .populate("user", "name email profilePicture")
+      .populate("participants", "name email"); // Ajouter la population des participants si nécessaire
 
-    // Ajouter les URLs des images à chaque événement avec liens relatifs
+    // Ajouter les URLs des images et participants à chaque événement avec liens relatifs
     const eventsWithImageUrls = userEvents.map((event) => {
+      // Vérifiez que `event.images` est un tableau
       const imagePaths =
         Array.isArray(event.images) && event.images.length > 0
           ? event.images.map(
@@ -115,19 +115,28 @@ const getCurrentUser = asyncHandler(async (req, res) => {
             )
           : []; // Si pas d'images, retourner un tableau vide
 
+      // Ajouter les participants s'ils existent
+      const participantsInfo =
+        Array.isArray(event.participants) && event.participants.length > 0
+          ? event.participants.map((participant) => ({
+              name: participant.name,
+              email: participant.email,
+            }))
+          : []; // Si pas de participants, retourner un tableau vide
+
       return {
         ...event._doc, // Inclure toutes les autres informations de l'événement
         images: imagePaths, // Liens relatifs vers les images
+        participants: participantsInfo, // Informations sur les participants
       };
     });
-    // console.log(eventsWithImageUrls);
 
     // Réponse finale avec les infos utilisateur et ses événements
     res.status(200).json({
       id: _id,
       name,
       email,
-      profilePicture,
+      profilePicture: `${profilePicture}?t=${Date.now()}`, // Ajoute un timestamp
       followersCount: followers.length, // Nombre de followers
       followingCount: following.length, // Nombre de personnes suivies
       events: eventsWithImageUrls, // Ajouter les événements publiés par l'utilisateur
@@ -154,10 +163,61 @@ const getProfilePicture = asyncHandler(async (req, res) => {
   }
 });
 
+// Mise à jour de l'image de profil
+const updateProfilePicture = asyncHandler(async (req, res) => {
+  const userId = req.user._id; // ID de l'utilisateur connecté
+  const file = req.file; // Fichier uploadé via multer
+
+  if (req.user.profilePicture) {
+    const oldImagePath = path.join(__dirname, "..", req.user.profilePicture);
+    if (fs.existsSync(oldImagePath)) {
+      fs.unlinkSync(oldImagePath); // Supprime l'ancienne image
+    }
+  }
+
+  if (!file) {
+    res.status(400).json({ message: "Aucun fichier n'a été téléchargé." });
+    return;
+  }
+
+  try {
+    // Construire le chemin relatif du fichier
+    const profilePicturePath = path.join(
+      "uploads",
+      "profilePictures",
+      file.filename
+    );
+
+    // Mettre à jour l'image de profil dans la base de données
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePicture: profilePicturePath },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      res.status(404).json({ message: "Utilisateur non trouvé." });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Image de profil mise à jour avec succès.",
+      profilePicture: `${profilePicturePath}?t=${Date.now()}`,
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la mise à jour de l'image de profil :",
+      error
+    );
+    res.status(500).json({ message: "Erreur serveur.", error: error.message });
+  }
+});
+
 module.exports = {
   registerUser,
   loginUser,
   getCurrentUser,
   getProfilePicture,
   upload,
+  updateProfilePicture,
 };

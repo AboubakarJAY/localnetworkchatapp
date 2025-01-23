@@ -4,6 +4,7 @@ const {
   loginUser,
   getCurrentUser,
   getProfilePicture,
+  updateProfilePicture,
   upload,
 } = require("../controllers/userController");
 const { protect } = require("../middlewares/authMiddleware");
@@ -14,6 +15,12 @@ const router = express.Router();
 router.post("/register", upload.single("profilePicture"), registerUser);
 router.post("/login", loginUser);
 router.get("/profilePicture/:userId", getProfilePicture);
+router.post(
+  "/upload",
+  protect,
+  upload.single("profilePicture"),
+  updateProfilePicture
+);
 
 // Route protégée
 router.get("/me", protect, getCurrentUser);
