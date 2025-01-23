@@ -120,7 +120,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
         images: imagePaths, // Liens relatifs vers les images
       };
     });
-    console.log(eventsWithImageUrls);
+    // console.log(eventsWithImageUrls);
 
     // Réponse finale avec les infos utilisateur et ses événements
     res.status(200).json({
